@@ -2,6 +2,19 @@ import os
 import sqlite3
 import uuid
 
+VIDEO_EXTENSIONS = {'.mp4', '.mkv', '.webm', '.mov', '.avi'}
+IMAGE_EXTENSIONS = {'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
+
+
+def get_media_type(filepath):
+    """Detect if a file is a video or image based on extension."""
+    ext = os.path.splitext(filepath)[1].lower()
+    if ext in VIDEO_EXTENSIONS:
+        return "video"
+    elif ext in IMAGE_EXTENSIONS:
+        return "image"
+    return "unknown"
+
 
 def _get_db_path(db_filename="photoflask.db"):
     # Return the absolute path to the SQLite database file in this folder.
@@ -10,20 +23,21 @@ def _get_db_path(db_filename="photoflask.db"):
 
 
 def add_photo_by_filepath(filepath, db_filename="photoflask.db", last_touched=None):
-    # Add a photo row to the photos table using Guid, FileName, FilePath, and LastTouched.
+    # Add a photo row to the photos table using Guid, FileName, FilePath, MediaType, and LastTouched.
     db_path = _get_db_path(db_filename)
     file_name = os.path.basename(filepath)
     guid = uuid.uuid4().hex[:16]
+    media_type = get_media_type(filepath)
 
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        INSERT INTO photos (Guid, FileName, FilePath, LastTouched)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO photos (Guid, FileName, FilePath, MediaType, LastTouched)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (guid, file_name, filepath, last_touched),
+        (guid, file_name, filepath, media_type, last_touched),
     )
 
     conn.commit()

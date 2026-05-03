@@ -12,32 +12,80 @@
             font-family: sans-serif;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
             height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 56px);
+            width: 100%;
+            padding: 16px 24px 24px;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        #topbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            background: rgba(17, 17, 17, 0.92);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+
+        #brand {
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        #settings-button {
+            width: 42px;
+            height: 42px;
+            padding: 0;
+            font-size: 1.25rem;
+            line-height: 1;
         }
 
         #slideshow {
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 20px;
+            flex: 1;
+            width: 100%;
         }
 
         #photo-container {
-            width: 80vw;
-            max-width: 900px;
-            height: 70vh;
+            flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
             background: #222;
-            border-radius: 8px;
-            overflow: hidden;
+            min-width: 0;
+            min-height: 0;
         }
 
         #photo-container img {
             max-width: 100%;
             max-height: 100%;
+            width: auto;
+            height: auto;
             object-fit: contain;
         }
 
@@ -75,9 +123,112 @@
             text-align: center;
             word-break: break-word;
         }
+
+        #scan-status {
+            margin-bottom: 12px;
+            padding: 10px 14px;
+            border-radius: 999px;
+            background: rgba(72, 187, 120, 0.14);
+            color: #b9f2c7;
+            font-size: 0.9rem;
+        }
+
+        #photo-info {
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        #settings-modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        #settings-modal.open {
+            display: flex;
+        }
+
+        #settings-panel {
+            width: min(420px, calc(100vw - 32px));
+            padding: 20px;
+            border-radius: 16px;
+            background: #1b1b1b;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+        }
+
+        #settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        #settings-header h2 {
+            font-size: 1.05rem;
+        }
+
+        #close-settings {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            font-size: 1.1rem;
+        }
+
+        .setting-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .setting-row label {
+            font-size: 0.95rem;
+            color: #d5d5d5;
+        }
+
+        .setting-row input,
+        .setting-row select {
+            background: #2a2a2a;
+            color: #f0f0f0;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .toggle {
+            width: 18px;
+            height: 18px;
+        }
+
+        #scan-form {
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        #scan-button {
+            width: 100%;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            border-radius: 10px;
+        }
     </style>
 </head>
 <body>
+
+<header id="topbar">
+    <a id="brand" href="https://github.com/GoingOffRoading" target="_blank" rel="noreferrer">PhotoFlask</a>
+    <button id="settings-button" type="button" aria-label="Open settings" onclick="openSettings()">&#9881;</button>
+</header>
+
+<main>
+{% if scan_message %}
+<div id="scan-status">{{ scan_message }}</div>
+{% endif %}
 
 <div id="slideshow">
     <button id="btn-prev" onclick="goToPhoto(-1)">&#8592;</button>
@@ -86,7 +237,14 @@
         {% if total == 0 %}
             <span class="no-photos">No photos found in the database.</span>
         {% else %}
-            <img id="photo-img" src="/image/{{ photos[initial_index].guid }}" alt="Photo" onerror="this.alt='Failed to load: ' + this.src">
+            {% if photos[initial_index].type == 'video' %}
+                <video id="media-element" controls style="max-width: 100%; max-height: 100%; width: auto; height: auto;">
+                    <source src="/image/{{ photos[initial_index].guid }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            {% else %}
+                <img id="media-element" src="/image/{{ photos[initial_index].guid }}" alt="Photo" onerror="this.alt='Failed to load: ' + this.src">
+            {% endif %}
         {% endif %}
     </div>
 
@@ -94,36 +252,232 @@
 </div>
 
 {% if total > 0 %}
-<div id="counter">{{ initial_index + 1 }} / {{ total }}</div>
-<div id="photo-name">{{ photos[initial_index].name }}</div>
+<div id="photo-info">
+    <div id="counter">{{ initial_index + 1 }} / {{ total }}</div>
+    <div id="photo-name">{{ photos[initial_index].name }}</div>
+</div>
 {% endif %}
+</main>
+
+<div id="settings-modal" aria-hidden="true" onclick="dismissSettings(event)">
+    <div id="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+        <div id="settings-header">
+            <h2 id="settings-title">Slideshow Settings</h2>
+            <button id="close-settings" type="button" aria-label="Close settings" onclick="closeSettings()">&times;</button>
+        </div>
+
+        <div class="setting-row">
+            <label for="autoplay-toggle">Autoplay</label>
+            <input class="toggle" id="autoplay-toggle" type="checkbox" onchange="handleAutoplayToggle()">
+        </div>
+
+        <div class="setting-row">
+            <label for="interval-select">Autoplay interval</label>
+            <select id="interval-select" onchange="handleIntervalChange()">
+                <option value="2000">2 seconds</option>
+                <option value="3000">3 seconds</option>
+                <option value="5000" selected>5 seconds</option>
+                <option value="8000">8 seconds</option>
+                <option value="12000">12 seconds</option>
+            </select>
+        </div>
+
+        <div class="setting-row">
+            <label for="loop-toggle">Loop slideshow</label>
+            <input class="toggle" id="loop-toggle" type="checkbox" checked onchange="handleLoopToggle()">
+        </div>
+
+        <div class="setting-row">
+            <label for="filename-toggle">Show filename</label>
+            <input class="toggle" id="filename-toggle" type="checkbox" checked onchange="handleFilenameToggle()">
+        </div>
+
+        <div class="setting-row">
+            <label for="fit-select">Photo fit</label>
+            <select id="fit-select" onchange="handleFitChange()">
+                <option value="contain" selected>Contain</option>
+                <option value="cover">Cover</option>
+            </select>
+        </div>
+
+        <form id="scan-form" method="post" action="/scan">
+            <input id="current-photo-input" type="hidden" name="current_photo" value="{% if total > 0 %}{{ photos[initial_index].guid }}{% endif %}">
+            <button id="scan-button" type="submit">Scan for photos</button>
+        </form>
+    </div>
+</div>
 
 <script>
     const total = {{ total }};
     const photoNames = {{ photos | map(attribute='name') | list | tojson }};
     const photoGuids = {{ photos | map(attribute='guid') | list | tojson }};
+    const photoTypes = {{ photos | map(attribute='type') | list | tojson }};
     let current = {{ initial_index }};
+    let autoplayTimer = null;
+    let isLoopEnabled = true;
+
+    function syncCurrentPhotoInput() {
+        const input = document.getElementById("current-photo-input");
+        if (input && total > 0) {
+            input.value = photoGuids[current];
+        }
+    }
 
     function updateUrl() {
         const url = new URL(window.location.href);
-        url.searchParams.set("guid", photoGuids[current]);
+        if (total > 0) {
+            url.searchParams.set("photo", photoGuids[current]);
+        }
         window.history.replaceState({}, "", url);
     }
 
+    function updateButtons() {
+        if (isLoopEnabled || total === 0) {
+            document.getElementById("btn-prev").disabled = false;
+            document.getElementById("btn-next").disabled = false;
+            return;
+        }
+
+        document.getElementById("btn-prev").disabled = current === 0;
+        document.getElementById("btn-next").disabled = current === total - 1;
+    }
+
+    function updateMediaElement() {
+        if (total === 0) return;
+
+        const container = document.getElementById("photo-container");
+        const mediaType = photoTypes[current];
+        const mediaGuid = photoGuids[current];
+        const src = "/image/" + mediaGuid + "?t=" + Date.now();
+
+        // Remove old element
+        const oldElement = document.getElementById("media-element");
+        if (oldElement) oldElement.remove();
+
+        // Create new element based on type
+        let newElement;
+        if (mediaType === "video") {
+            newElement = document.createElement("video");
+            newElement.id = "media-element";
+            newElement.controls = true;
+            newElement.style.cssText = "max-width: 100%; max-height: 100%; width: auto; height: auto;";
+            const source = document.createElement("source");
+            source.src = src;
+            source.type = "video/mp4";
+            newElement.appendChild(source);
+        } else {
+            newElement = document.createElement("img");
+            newElement.id = "media-element";
+            newElement.src = src;
+            newElement.alt = "Photo";
+            newElement.onerror = function() { this.alt = "Failed to load: " + this.src; };
+            newElement.style.cssText = "max-width: 100%; max-height: 100%; width: auto; height: auto;";
+        }
+
+        container.appendChild(newElement);
+    }
+
     function goToPhoto(direction) {
+        if (total === 0) {
+            return;
+        }
+
+        const nextIndex = current + direction;
+        if (!isLoopEnabled && (nextIndex < 0 || nextIndex >= total)) {
+            return;
+        }
+
         current = (current + direction + total) % total;
-        const img = document.getElementById("photo-img");
-        img.src = "";
-        img.src = "/image/" + photoGuids[current] + "?t=" + Date.now();
+        
         document.getElementById("counter").textContent = (current + 1) + " / " + total;
         document.getElementById("photo-name").textContent = photoNames[current];
+        syncCurrentPhotoInput();
         updateUrl();
+        updateButtons();
+        updateMediaElement();
+    }
+
+    function openSettings() {
+        const modal = document.getElementById("settings-modal");
+        modal.classList.add("open");
+        modal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeSettings() {
+        const modal = document.getElementById("settings-modal");
+        modal.classList.remove("open");
+        modal.setAttribute("aria-hidden", "true");
+    }
+
+    function dismissSettings(event) {
+        if (event.target.id === "settings-modal") {
+            closeSettings();
+        }
+    }
+
+    function stopAutoplay() {
+        if (autoplayTimer !== null) {
+            window.clearInterval(autoplayTimer);
+            autoplayTimer = null;
+        }
+    }
+
+    function startAutoplay() {
+        stopAutoplay();
+
+        if (!document.getElementById("autoplay-toggle").checked || total <= 1) {
+            return;
+        }
+
+        const interval = Number(document.getElementById("interval-select").value);
+        autoplayTimer = window.setInterval(function() {
+            if (!isLoopEnabled && current === total - 1) {
+                stopAutoplay();
+                document.getElementById("autoplay-toggle").checked = false;
+                return;
+            }
+            goToPhoto(1);
+        }, interval);
+    }
+
+    function handleAutoplayToggle() {
+        startAutoplay();
+    }
+
+    function handleIntervalChange() {
+        startAutoplay();
+    }
+
+    function handleLoopToggle() {
+        isLoopEnabled = document.getElementById("loop-toggle").checked;
+        updateButtons();
+        startAutoplay();
+    }
+
+    function handleFilenameToggle() {
+        const photoName = document.getElementById("photo-name");
+        if (!photoName) {
+            return;
+        }
+        photoName.style.display = document.getElementById("filename-toggle").checked ? "block" : "none";
+    }
+
+    function handleFitChange() {
+        const element = document.getElementById("media-element");
+        if (!element) {
+            return;
+        }
+        element.style.objectFit = document.getElementById("fit-select").value;
     }
 
     document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") closeSettings();
         if (e.key === "ArrowLeft") goToPhoto(-1);
         if (e.key === "ArrowRight") goToPhoto(1);
     });
+
+    syncCurrentPhotoInput();
+    updateButtons();
 </script>
 
 </body>
