@@ -1,0 +1,12 @@
+# SQLite databases generated at runtime
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtualenv
+venv/
+.env/
