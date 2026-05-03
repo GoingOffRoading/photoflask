@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PhotoFlask – Gallery</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>📷 PhotoFlask</h1>
+    <nav>
+      <a href="{{ url_for('index') }}">Gallery</a>
+      <a href="{{ url_for('scan') }}" class="btn-scan">Scan for Photos</a>
+    </nav>
+  </header>
+
+  <main>
+    {% if scan_result is defined and scan_result %}
+    <div class="scan-banner">
+      Scan complete – found <strong>{{ scan_result.scanned }}</strong> image(s),
+      added <strong>{{ scan_result.added }}</strong> new,
+      skipped <strong>{{ scan_result.skipped }}</strong> duplicate(s).
+    </div>
+    {% endif %}
+
+    {% if photos %}
+    <div class="gallery">
+      {% for photo in photos %}
+      <a class="card" href="{{ url_for('photo_detail', photo_id=photo['id']) }}">
+        <img src="{{ url_for('serve_photo', photo_id=photo['id']) }}"
+             alt="{{ photo['filename'] }}"
+             loading="lazy" />
+        <span class="caption">{{ photo['filename'] }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty">
+      No photos found.
+      <a href="{{ url_for('scan') }}">Click here to scan for photos</a>.
+    </p>
+    {% endif %}
+  </main>
+</body>
+</html>
